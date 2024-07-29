@@ -225,12 +225,15 @@ def train_model(input_tensor, label, criterion=None, model=None):
             embs = embs.detach().numpy()
             results = do_tasks(embs)
             columns = ['crime_mae', 'crime_rmse', 'crime_r2', 'check_mae', 'check_rmse', 'check_r2', 'nmi', 'ars']
+            file_exists = os.path.isfile('results_new.csv')
 
             # 保存结果到 CSV 文件
-            with open('results.csv', 'a', newline='') as csvfile:
+            with open('results_new.csv', 'a', newline='') as csvfile:
                 writer = csv.writer(csvfile)
-                writer.writerow(columns)
+                if not file_exists:
+                    writer.writerow(columns)
                 writer.writerow(results)
+
 
 
 if __name__ == '__main__':
