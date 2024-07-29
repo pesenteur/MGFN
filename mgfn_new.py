@@ -1,4 +1,5 @@
 import torch
+import csv
 import numpy as np
 import torch.nn as nn
 import torch.optim as optim
@@ -218,7 +219,7 @@ def train_model(input_tensor, label, criterion=None, model=None):
         optimizer.zero_grad()
         loss.backward()
         optimizer.step()
-        if epoch % 50 == 0:
+        if epoch % 5 == 0:
             print("Epoch {}, Loss {}".format(epoch, loss.item()))
             embs = model.out_feature()
             embs = embs.detach().numpy()
@@ -226,7 +227,7 @@ def train_model(input_tensor, label, criterion=None, model=None):
             columns = ['crime_mae', 'crime_rmse', 'crime_r2', 'check_mae', 'check_rmse', 'check_r2', 'nmi', 'ars']
 
             # 保存结果到 CSV 文件
-            with open('results.csv', 'w', newline='') as csvfile:
+            with open('results.csv', 'a', newline='') as csvfile:
                 writer = csv.writer(csvfile)
                 writer.writerow(columns)
                 writer.writerow(results)
