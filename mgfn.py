@@ -50,37 +50,176 @@ class PatternGraphBranch(nn.Module):
         x = self.norm_out(x)
         return x
 
+# class PatternGraphNet(nn.Module):
+#     def __init__(self, num_graphs, input_dim, hidden_dim, branch_output_dim, final_output_dim, num_heads):
+#         super(PatternGraphNet, self).__init__()
+#         self.branches = nn.ModuleList([PatternGraphBranch(input_dim, hidden_dim, branch_output_dim, num_heads,4) for _ in range(num_graphs)])
+#         self.rnn = nn.GRU(branch_output_dim, final_output_dim, batch_first=True)
+#         self.final_norm = nn.LayerNorm(1260)
+#         self.dropout = nn.Dropout(p=0.5)
+#         self.fc = DeepFc(256, 196)
+#         self.decoder_s = nn.Linear(196, 196)
+#         self.decoder_t = nn.Linear(196, 196)
+#         self.feature = None
+#         self.sageconv = GraphSAGE(1260,512,256)
+#         adj_matrix = np.load('adj_matrix.npy')
+#         adj_matrix_sparse = sp.coo_matrix(adj_matrix)
+#         edge_index, edge_attr = from_scipy_sparse_matrix(adj_matrix_sparse)
+#         self.edge_index=edge_index
+#     def forward(self, graphs):
+#         branch_outputs = [branch(graph) for branch, graph in zip(self.branches, graphs)]  # (batch_size, branch_output_dim)
+#         concatenated = torch.cat(branch_outputs, dim=1)  # (batch_size, branch_output_dim * num_graphs)
+#         out = self.final_norm(concatenated)
+#         out = self.sageconv(out, self.edge_index)
+#         out = self.fc(out)
+#         self.feature = out
+#         out_s = self.decoder_s(out)
+#         out_t = self.decoder_t(out)
+#         return out_s, out_t
+
+#     def out_feature(self, ):
+#         return self.feature
+
+
+# class PatternGraphNet(nn.Module):
+#     def __init__(self, num_graphs, input_dim, hidden_dim, branch_output_dim, final_output_dim, num_heads):
+#         super(PatternGraphNet, self).__init__()
+#         self.branches = nn.ModuleList([PatternGraphBranch(input_dim, hidden_dim, branch_output_dim, num_heads, 4) for _ in range(num_graphs)])
+#         self.rnn = nn.GRU(branch_output_dim, final_output_dim, batch_first=True)
+#         self.final_norm = nn.LayerNorm(final_output_dim)
+#         self.dropout = nn.Dropout(p=0.5)
+#         self.fc = DeepFc(final_output_dim, 196)
+#         self.decoder_s = nn.Linear(196, 196)
+#         self.decoder_t = nn.Linear(196, 196)
+#         self.feature = None
+#         self.sageconv = GraphSAGE(final_output_dim, 512, 256)
+#         adj_matrix = np.load('adj_matrix.npy')
+#         adj_matrix_sparse = sp.coo_matrix(adj_matrix)
+#         edge_index, edge_attr = from_scipy_sparse_matrix(adj_matrix_sparse)
+#         self.edge_index = edge_index
+
+#     def forward(self, graphs):
+#         branch_outputs = [branch(graph) for branch, graph in zip(self.branches, graphs)]  # (batch_size, branch_output_dim)
+#         branch_outputs = torch.stack(branch_outputs, dim=1)  # (batch_size, num_graphs, branch_output_dim)
+        
+#         # RNN层处理时序数据
+#         rnn_out, _ = self.rnn(branch_outputs)
+#         final_output = rnn_out[:, -1, :]  # 只取最后一个时间步的输出
+        
+#         # 残差连接和LayerNorm
+#         final_output = self.final_norm(final_output)
+        
+#         # GraphSAGE处理
+#         final_output = self.sageconv(final_output, self.edge_index)
+        
+#         # 全连接层处理
+#         final_output = self.fc(final_output)
+#         self.feature = final_output
+        
+#         # 解码器
+#         out_s = self.decoder_s(final_output)
+#         out_t = self.decoder_t(final_output)
+        
+#         return out_s, out_t
+
+#     def out_feature(self):
+#         return self.feature
+
+# class PatternGraphNet(nn.Module):
+#     def __init__(self, num_graphs, input_dim, hidden_dim, branch_output_dim, final_output_dim, num_heads):
+#         super(PatternGraphNet, self).__init__()
+#         self.branches = nn.ModuleList([PatternGraphBranch(input_dim, hidden_dim, branch_output_dim, num_heads, 4) for _ in range(num_graphs)])
+#         self.transformer_encoder = nn.TransformerEncoder(
+#             nn.TransformerEncoderLayer(d_model=branch_output_dim, nhead=num_heads),
+#             num_layers=4
+#         )
+#         self.final_norm = nn.LayerNorm(branch_output_dim * num_graphs)
+#         self.dropout = nn.Dropout(p=0.5)
+#         self.fc = DeepFc(branch_output_dim * num_graphs, 196)
+#         self.decoder_s = nn.Linear(196, 196)
+#         self.decoder_t = nn.Linear(196, 196)
+#         self.feature = None
+#         self.sageconv = GraphSAGE(branch_output_dim * num_graphs, 512, 256)
+#         adj_matrix = np.load('adj_matrix.npy')
+#         adj_matrix_sparse = sp.coo_matrix(adj_matrix)
+#         edge_index, edge_attr = from_scipy_sparse_matrix(adj_matrix_sparse)
+#         self.edge_index = edge_index
+
+#     def forward(self, graphs):
+#         branch_outputs = [branch(graph) for branch, graph in zip(self.branches, graphs)]  # (batch_size, branch_output_dim)
+#         branch_outputs = torch.stack(branch_outputs, dim=1)  # (batch_size, num_graphs, branch_output_dim)
+        
+#         # Transformer处理时序数据
+#         branch_outputs = branch_outputs.permute(1, 0, 2)  # (num_graphs, batch_size, branch_output_dim)
+#         transformer_out = self.transformer_encoder(branch_outputs)
+#         transformer_out = transformer_out.permute(1, 0, 2)  # (batch_size, num_graphs, branch_output_dim)
+#         concatenated = transformer_out.contiguous().view(transformer_out.size(0), -1)  # (batch_size, branch_output_dim * num_graphs)
+        
+#         # 残差连接和LayerNorm
+#         out = self.final_norm(concatenated)
+        
+#         # GraphSAGE处理
+#         out = self.sageconv(out, self.edge_index)
+        
+#         # 全连接层处理
+#         out = self.fc(out)
+#         self.feature = out
+        
+#         # 解码器
+#         out_s = self.decoder_s(out)
+#         out_t = self.decoder_t(out)
+        
+#         return out_s, out_t
+
+#     def out_feature(self):
+#         return self.feature
+
 class PatternGraphNet(nn.Module):
-    def __init__(self, num_graphs, input_dim, hidden_dim, branch_output_dim, final_output_dim, num_heads):
+    def __init__(self, num_graphs, input_dim, hidden_dim, branch_output_dim, final_output_dim, num_heads, num_layers=2):
         super(PatternGraphNet, self).__init__()
-        self.branches = nn.ModuleList([PatternGraphBranch(input_dim, hidden_dim, branch_output_dim, num_heads,4) for _ in range(num_graphs)])
-        self.rnn = nn.GRU(branch_output_dim, final_output_dim, batch_first=True)
-        self.final_norm = nn.LayerNorm(1260)
+        self.branches = nn.ModuleList([PatternGraphBranch(input_dim, hidden_dim, branch_output_dim, num_heads, 4) for _ in range(num_graphs)])
+        
+        # 使用双向RNN和多层RNN
+        self.rnn = nn.GRU(branch_output_dim, final_output_dim, num_layers=num_layers, bidirectional=True, batch_first=True)
+        
+        self.final_norm = nn.LayerNorm(final_output_dim * 2)
         self.dropout = nn.Dropout(p=0.5)
-        self.fc = DeepFc(256, 144)
-        self.decoder_s = nn.Linear(144, 144)
-        self.decoder_t = nn.Linear(144, 144)
+        self.fc = DeepFc(final_output_dim * 2, 196)
+        self.decoder_s = nn.Linear(196, 196)
+        self.decoder_t = nn.Linear(196, 196)
         self.feature = None
-        self.sageconv = GraphSAGE(1260,512,256)
+        self.sageconv = GraphSAGE(final_output_dim * 2, 512, 256)
         adj_matrix = np.load('adj_matrix.npy')
         adj_matrix_sparse = sp.coo_matrix(adj_matrix)
         edge_index, edge_attr = from_scipy_sparse_matrix(adj_matrix_sparse)
-        self.edge_index=edge_index
+        self.edge_index = edge_index
+
     def forward(self, graphs):
         branch_outputs = [branch(graph) for branch, graph in zip(self.branches, graphs)]  # (batch_size, branch_output_dim)
-        concatenated = torch.cat(branch_outputs, dim=1)  # (batch_size, branch_output_dim * num_graphs)
-        out = self.final_norm(concatenated)
-        out = self.sageconv(out, self.edge_index)
-        out = self.fc(out)
-        self.feature = out
-        out_s = self.decoder_s(out)
-        out_t = self.decoder_t(out)
+        branch_outputs = torch.stack(branch_outputs, dim=1)  # (batch_size, num_graphs, branch_output_dim)
+        
+        # RNN层处理时序数据
+        rnn_out, _ = self.rnn(branch_outputs)
+        final_output = rnn_out[:, -1, :]  # 只取最后一个时间步的输出
+        
+        # 残差连接和LayerNorm
+        final_output = self.final_norm(final_output)
+        
+        # GraphSAGE处理
+        final_output = self.sageconv(final_output, self.edge_index)
+        
+        # 全连接层处理
+        final_output = self.fc(final_output)
+        self.feature = final_output
+        
+        # 解码器
+        out_s = self.decoder_s(final_output)
+        out_t = self.decoder_t(final_output)
+        
         return out_s, out_t
 
-    def out_feature(self, ):
+    def out_feature(self):
         return self.feature
-
-
 
 class DeepFc(nn.Module):
     def __init__(self, input_dim, output_dim):
@@ -92,7 +231,6 @@ class DeepFc(nn.Module):
             nn.LeakyReLU(negative_slope=0.3, inplace=True),
             nn.Linear(input_dim * 2, output_dim),
             nn.LeakyReLU(negative_slope=0.3, inplace=True), )
-
         self.output = None
 
     def forward(self, x):
@@ -228,7 +366,6 @@ class SimLoss(nn.Module):
 
 
 def train_model(input_tensor, label, criterion=None, model=None):
-    emb_dim = 96
     epochs = 10000
     learning_rate = 0.0003
     weight_decay = 5e-4
@@ -256,7 +393,7 @@ def train_model(input_tensor, label, criterion=None, model=None):
         optimizer.zero_grad()
         loss.backward()
         optimizer.step()
-        if epoch % 5 == 0:
+        if epoch % 10 == 0:
             print("Epoch {}, Loss {}".format(epoch, loss.item()))
             embs = model.out_feature()
             embs = embs.detach().numpy()
