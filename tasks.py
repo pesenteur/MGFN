@@ -73,17 +73,16 @@ def lu_classify(emb, display=False):
 def do_tasks(embs, display=True):
     if display:
         print("popularity Prediction: ")
-    crime_count_label = np.load("./Data/popularity.npy",allow_pickle=True)
+    crime_count_label = np.load("./NewData/popularity.npy",allow_pickle=True)
     crime_mae, crime_rmse, crime_r2 = predict_regression(embs, crime_count_label, display=display)
 
     if display:
         print("Check-in Prediction: ")
-    check_in_label = np.load("./Data/check_in_label.npy")
+    check_in_label = np.load("./NewData/check_in.npy")
     check_mae, check_rmse, check_r2 = predict_regression(embs, check_in_label, display=display)
 
-    if display:
-        print("Land Usage Prediction: ")
-    nmi, ars = lu_classify(embs, display=display)
-
-    return crime_mae, crime_rmse, crime_r2, check_mae, check_rmse, check_r2, nmi, ars
+    # if display:
+    #     print("Land Usage Prediction: ")
+    # nmi, ars = lu_classify(embs, display=display)
+    # return crime_mae, crime_rmse, crime_r2, check_mae, check_rmse, check_r2, nmi, ars
 

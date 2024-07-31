@@ -242,95 +242,6 @@ class DeepFc(nn.Module):
 
 
 
-
-class GraphStructuralEncoder(nn.Module):
-
-    def __init__(self, d_model, nhead, dim_feedforward=2048, dropout=0.1,):
-        super(GraphStructuralEncoder, self).__init__()
-        self.self_attn = nn.MultiheadAttention(d_model, nhead, dropout=dropout)
-        # Implementation of Feedforward model
-        self.linear1 = nn.Linear(d_model, dim_feedforward,)
-        self.dropout = nn.Dropout(dropout)
-        self.linear2 = nn.Linear(dim_feedforward, d_model)
-
-        self.norm1 = nn.LayerNorm(d_model)
-        self.norm2 = nn.LayerNorm(d_model)
-        self.dropout1 = nn.Dropout(dropout)
-        self.dropout2 = nn.Dropout(dropout)
-
-        self.activation = F.relu
-
-    def forward(self, src):
-        src2 = self.self_attn(src, src, src,)[0]
-        src = src + self.dropout1(src2)
-        src = self.norm1(src)
-        src2 = self.linear2(self.dropout(self.activation(self.linear1(src))))
-        src = src + self.dropout2(src2)
-        src = self.norm2(src)
-        return src
-
-
-class MobilityPatternJointLearning(nn.Module):
-    """
-    input: (7, 180, 180)
-    output: (180, 144)
-    """
-    def __init__(self, graph_num, node_num, output_dim):
-        super(MobilityPatternJointLearning, self).__init__()
-        self.graph_num = graph_num
-        self.node_num = node_num
-        self.num_multi_pattern_encoder = 3
-        self.num_cross_graph_encoder = 1
-        self.multi_pattern_blocks = nn.ModuleList(
-            [GraphStructuralEncoder(d_model=node_num, nhead=4) for _ in range(self.num_multi_pattern_encoder)])
-        self.cross_graph_blocks = nn.ModuleList(
-            [GraphStructuralEncoder(d_model=node_num, nhead=4) for _ in range(self.num_cross_graph_encoder)])
-        self.fc = DeepFc(self.graph_num*self.node_num, output_dim)
-        self.linear_out = nn.Linear(node_num, output_dim)
-        self.para1 = torch.nn.Parameter(torch.FloatTensor(1), requires_grad=True)#the size is [1]
-        self.para1.data.fill_(0.7)
-        self.para2 = torch.nn.Parameter(torch.FloatTensor(1), requires_grad=True)#the size is [1]
-        self.para2.data.fill_(0.3)
-        assert node_num % 2 == 0
-        self.s_linear = nn.Linear(node_num, int(node_num / 2))
-        self.o_linear = nn.Linear(node_num, int(node_num / 2))
-
-    def forward(self, x):
-        out = x
-        for multi_pattern in self.multi_pattern_blocks:
-            out = multi_pattern(out)
-        multi_pattern_emb = out
-        out = out.transpose(0, 1)
-        for cross_graph in self.cross_graph_blocks:
-            out = cross_graph(out)
-        out = out.transpose(0, 1)
-        out = out*self.para2 + multi_pattern_emb*self.para1
-        out = out.contiguous()
-        out = out.view(-1, self.node_num*self.graph_num)
-        out = self.fc(out)
-        return out
-
-
-class MGFN(nn.Module):
-    def __init__(self, graph_num, node_num, output_dim):
-        super(MGFN, self).__init__()
-        self.encoder = MobilityPatternJointLearning(graph_num=graph_num, node_num=node_num, output_dim=output_dim)
-        self.decoder_s = nn.Linear(output_dim, output_dim)
-        self.decoder_t = nn.Linear(output_dim, output_dim)
-        self.feature = None
-        self.name = "MGFN"
-
-    def forward(self, x):
-        # x = x.unsqueeze(0)
-        self.feature = self.encoder(x)
-        out_s = self.decoder_s(self.feature)
-        out_t = self.decoder_t(self.feature)
-        return out_s, out_t
-
-    def out_feature(self, ):
-        return self.feature
-
-
 def pairwise_inner_product(mat_1, mat_2):
     n, m = mat_1.shape  # (180, 144)
     mat_expand = torch.unsqueeze(mat_2, 0)  # (1, 180, 144),
@@ -370,7 +281,7 @@ def train_model(input_tensor, label, criterion=None, model=None):
     weight_decay = 5e-4
 
     num_graphs = 7
-    input_dim = 180  # 输入特征维度
+    input_dim = 69  # 输入特征维度
     hidden_dim = 128  # 隐藏层特征维度
     branch_output_dim = 180  # 每个分支的输出特征维度
     final_output_dim = 256  # 最终输出特征维度
@@ -402,17 +313,17 @@ def train_model(input_tensor, label, criterion=None, model=None):
             file_exists = os.path.isfile('results.csv')
 
             # 保存结果到 CSV 文件
-            with open('results.csv', 'a', newline='') as csvfile:
-                writer = csv.writer(csvfile)
-                if not file_exists:
-                    writer.writerow(columns)
-                writer.writerow(results)
+            # with open('results.csv', 'a', newline='') as csvfile:
+            #     writer = csv.writer(csvfile)
+            #     if not file_exists:
+            #         writer.writerow(columns)
+            #     writer.writerow(results)
 
 
 if __name__ == '__main__':
-    mob_pattern = np.load("./Data/mob_patterns.npy")
+    mob_pattern = np.load("./NewData/mob_pattern.npy")
     pattern_list = [torch.tensor(mob_pattern[i], dtype=torch.float) for i in range(mob_pattern.shape[0])]
-    mob_adj = np.load("./Data/mob_label.npy")
+    mob_adj = np.load("./NewData/mobility.npy")
     mob_pattern = torch.Tensor(mob_pattern)
     mob_adj = torch.Tensor(mob_adj)
     train_model(pattern_list, mob_adj)
