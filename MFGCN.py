@@ -182,7 +182,7 @@ def train_model(input_tensor, label, criterion=None, model=None):
         optimizer.zero_grad()
         loss.backward()
         optimizer.step()
-        if epoch % 20 == 0:
+        if epoch % 10 == 0:
             print("Epoch {}, Loss {}".format(epoch, loss.item()))
             embs = model.out_feature()
             embs = embs.detach().numpy()

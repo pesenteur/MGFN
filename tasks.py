@@ -52,13 +52,12 @@ def predict_regression(embs, labels, display=False):
 
 
 def lu_classify(emb, display=False):
-    lu_label_filename = "./Data/mh_cd.json"
+    lu_label_filename = "./mh_land.json"
     cd = json.load(open(lu_label_filename))
-    cd_labels = np.zeros((180))
-    for i in range(180):
+    cd_labels = np.zeros((69))
+    for i in range(69):
         cd_labels[i] = cd[str(i)]
-
-    n = 12
+    n = 14
     kmeans = KMeans(n_clusters=n, random_state=3)
     emb_labels = kmeans.fit_predict(emb)
 
@@ -81,8 +80,8 @@ def do_tasks(embs, display=True):
     check_in_label = np.load("./NewData/check_in.npy")
     check_mae, check_rmse, check_r2 = predict_regression(embs, check_in_label, display=display)
 
-    # if display:
-    #     print("Land Usage Prediction: ")
-    # nmi, ars = lu_classify(embs, display=display)
-    # return crime_mae, crime_rmse, crime_r2, check_mae, check_rmse, check_r2, nmi, ars
+    if display:
+        print("Land Usage Prediction: ")
+    nmi, ars = lu_classify(embs, display=display)
+    return crime_mae, crime_rmse, crime_r2, check_mae, check_rmse, check_r2, nmi, ars
 
