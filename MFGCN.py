@@ -155,7 +155,7 @@ class SimLoss(nn.Module):
 
 
 def train_model(input_tensor, label, criterion=None, model=None):
-    epochs = 50000
+    epochs = 2000
     learning_rate = 0.0005
     weight_decay = 5e-4
 

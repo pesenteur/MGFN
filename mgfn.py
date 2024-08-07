@@ -183,7 +183,7 @@ def train_model(input_tensor, label, criterion=None, model=None):
     if criterion is None:
         criterion = SimLoss()
     if model is None:
-        model = MGFN(graph_num=7, node_num=180, output_dim=emb_dim)
+        model = MGFN(graph_num=7, node_num=69, output_dim=emb_dim)
     # model = OneStage(graph_num=7, node_num=180, out_emb_dim=144)
     optimizer = optim.Adam(model.parameters(), lr=learning_rate, weight_decay=weight_decay)
 
@@ -204,8 +204,8 @@ def train_model(input_tensor, label, criterion=None, model=None):
 
 
 if __name__ == '__main__':
-    mob_pattern = np.load("./Data/mob_patterns.npy")
-    mob_adj = np.load("./Data/mob_label.npy")
+    mob_pattern = np.load("./NewData/mob_patterns.npy")
+    mob_adj = np.load("./NewData/mobility.npy")
     mob_pattern = torch.Tensor(mob_pattern)
     mob_adj = torch.Tensor(mob_adj)
     train_model(mob_pattern, mob_adj)
