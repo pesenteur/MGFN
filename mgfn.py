@@ -92,19 +92,17 @@ class MobilityPatternJointLearning(nn.Module):
         self.num_multi_pattern_encoder = 3
         self.num_cross_graph_encoder = 1
         self.multi_pattern_blocks = nn.ModuleList(
-            [GraphStructuralEncoder(d_model=node_num, nhead=4) for _ in range(self.num_multi_pattern_encoder)])
+            [GraphStructuralEncoder(d_model=node_num, nhead=3) for _ in range(self.num_multi_pattern_encoder)])
         self.cross_graph_blocks = nn.ModuleList(
-            [GraphStructuralEncoder(d_model=node_num, nhead=4) for _ in range(self.num_cross_graph_encoder)])
+            [GraphStructuralEncoder(d_model=node_num, nhead=3) for _ in range(self.num_cross_graph_encoder)])
         self.fc = DeepFc(self.graph_num*self.node_num, output_dim)
         self.linear_out = nn.Linear(node_num, output_dim)
         self.para1 = torch.nn.Parameter(torch.FloatTensor(1), requires_grad=True)#the size is [1]
         self.para1.data.fill_(0.7)
         self.para2 = torch.nn.Parameter(torch.FloatTensor(1), requires_grad=True)#the size is [1]
         self.para2.data.fill_(0.3)
-        assert node_num % 2 == 0
         self.s_linear = nn.Linear(node_num, int(node_num / 2))
         self.o_linear = nn.Linear(node_num, int(node_num / 2))
-        self.concat = ConcatLinear(int(node_num / 2), int(node_num / 2), node_num)
 
     def forward(self, x):
         out = x
@@ -177,7 +175,7 @@ class SimLoss(nn.Module):
 
 def train_model(input_tensor, label, criterion=None, model=None):
     emb_dim = 96
-    epochs = 2000
+    epochs = 1800
     learning_rate = 0.0005
     weight_decay = 5e-4
     if criterion is None:
@@ -196,7 +194,7 @@ def train_model(input_tensor, label, criterion=None, model=None):
         optimizer.zero_grad()
         loss.backward()
         optimizer.step()
-        if epoch % 50 == 0:
+        if epoch > 1750:
             print("Epoch {}, Loss {}".format(epoch, loss.item()))
             embs = model.out_feature()
             embs = embs.detach().numpy()
@@ -204,7 +202,7 @@ def train_model(input_tensor, label, criterion=None, model=None):
 
 
 if __name__ == '__main__':
-    mob_pattern = np.load("./NewData/mob_patterns.npy")
+    mob_pattern = np.load("./NewData/mob_pattern.npy")
     mob_adj = np.load("./NewData/mobility.npy")
     mob_pattern = torch.Tensor(mob_pattern)
     mob_adj = torch.Tensor(mob_adj)

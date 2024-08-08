@@ -85,3 +85,6 @@ def do_tasks(embs, display=True):
     nmi, ars = lu_classify(embs, display=display)
     return crime_mae, crime_rmse, crime_r2, check_mae, check_rmse, check_r2, nmi, ars
 
+if __name__ == '__main__':
+    embs = np.load("./DeepWalk_emb.npy")
+    do_tasks(embs)
