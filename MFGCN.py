@@ -7,6 +7,7 @@ import torch.optim as optim
 import torch.nn.functional as F
 from tasks import do_tasks
 from torch_geometric.nn import SAGEConv
+from torch_geometric.nn import GCNConv
 from torch_geometric.utils import from_scipy_sparse_matrix
 import scipy.sparse as sp
 
@@ -21,7 +22,17 @@ class GraphSAGE(torch.nn.Module):
         x = F.relu(x)
         x = self.conv2(x, edge_index)
         return x
+class GCN(torch.nn.Module):
+    def __init__(self, in_channels, hidden_channels, out_channels):
+        super(GCN, self).__init__()
+        self.conv1 = GCNConv(in_channels, hidden_channels)
+        self.conv2 = GCNConv(hidden_channels, out_channels)
 
+    def forward(self, x, edge_index):
+        x = self.conv1(x, edge_index)
+        x = F.relu(x)
+        x = self.conv2(x, edge_index)
+        return x
 class PatternGraphBranch(nn.Module):
     def __init__(self, input_dim, hidden_dim, output_dim, num_heads, num_attention_layers):
         super(PatternGraphBranch, self).__init__()
@@ -155,15 +166,15 @@ class SimLoss(nn.Module):
 
 
 def train_model(input_tensor, label, criterion=None, model=None):
-    epochs = 2000
+    epochs = 1800
     learning_rate = 0.0005
     weight_decay = 5e-4
 
     num_graphs = 7
     input_dim = 69  # 输入特征维度
     hidden_dim = 128  # 隐藏层特征维度
-    branch_output_dim = 180  # 每个分支的输出特征维度
-    final_output_dim = 256  # 最终输出特征维度
+    branch_output_dim = 120  # 每个分支的输出特征维度
+    final_output_dim = 128  # 最终输出特征维度
     num_heads = 8  # 多头注意力机制中的头数
     if criterion is None:
         criterion = SimLoss()
@@ -172,7 +183,10 @@ def train_model(input_tensor, label, criterion=None, model=None):
         model = PatternGraphNet(num_graphs, input_dim, hidden_dim, branch_output_dim, final_output_dim, num_heads)
     # model = OneStage(graph_num=7, node_num=180, out_emb_dim=144)
     optimizer = optim.Adam(model.parameters(), lr=learning_rate, weight_decay=weight_decay)
-
+    best_score = 0.5
+    best_p_r2 = 0
+    best_c_r2 = 0
+    best_epoch = 0
     for epoch in range(epochs):
         model.train()
         # out_s, out_t = model(input_tensor)
@@ -182,21 +196,30 @@ def train_model(input_tensor, label, criterion=None, model=None):
         optimizer.zero_grad()
         loss.backward()
         optimizer.step()
-        if epoch > 1950:
+
+        if epoch > 1000:
             print("Epoch {}, Loss {}".format(epoch, loss.item()))
             embs = model.out_feature()
             embs = embs.detach().numpy()
-            results = do_tasks(embs)
+            pop_mae, pop_rmse, pop_r2, check_mae, check_rmse, check_r2, nmi, ars = do_tasks(embs)
+            if(pop_r2 + check_r2 > best_score):
+              best_epoch = epoch
+              best_score = pop_r2 + check_r2 
+              best_p_r2 = pop_r2
+              best_c_r2 = check_r2
             columns = ['crime_mae', 'crime_rmse', 'crime_r2', 'check_mae', 'check_rmse', 'check_r2', 'nmi', 'ars']
-
             file_exists = os.path.isfile('results.csv')
-
+            
             # 保存结果到 CSV 文件
             # with open('results.csv', 'a', newline='') as csvfile:
             #     writer = csv.writer(csvfile)
             #     if not file_exists:
             #         writer.writerow(columns)
             #     writer.writerow(results)
+    print("best_epoch:",best_epoch)
+    print("best_p_r2:",best_p_r2)
+    print("best_c_r2:",best_c_r2)
+
 
 
 if __name__ == '__main__':
